@@ -1,0 +1,15 @@
+This is a mirror of http://www.vim.org/scripts/script.php?script_id=4409
+
+* Add any folder to the panel
+* Each folder can be expanded independently
+* You can stick files in there as well
+* Drag and drop works too
+* Create and display any number of panels
+* Session support: find your panels and all other windows the way you left them when you exited Vim
+* Filesystem operations, including file copying using visual selection
+* Propper handling of Windows paths
+* Explore the filesystem without constrains, in explorer mode
+* Use it for project management, keeping bookmarks, notes or anything you like
+
+Visit the project page for more details: http://mihaifm.github.com/vimpanel/
+
