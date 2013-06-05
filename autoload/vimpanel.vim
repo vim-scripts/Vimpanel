@@ -1,4 +1,4 @@
-let vimpanel#version = '1.0.0'
+let vimpanel#version = '1.0.3'
 
 if exists("g:loaded_vimpanel_autoload")
   finish
@@ -511,7 +511,7 @@ function! vimpanel#readPanelData(panel_name)
   let g:vimpanel#session_file = g:vimpanel#storage_file . "_session"
 
   if !filereadable(g:vimpanel#session_file)
-    writefile([], g:vimpanel#session_file)
+    call writefile([], g:vimpanel#session_file)
   else
     let g:vimpanel#state_input_list = readfile(g:vimpanel#session_file)
     let g:vimpanel#state_input_list = map(g:vimpanel#state_input_list, "tolower(v:val)")
@@ -628,6 +628,19 @@ function! vimpanel#selectNode()
   endif
 endfunction
 
+" opens the node in a new tab
+function! vimpanel#tabNode()
+  let node = vimpanel#getSelectedNode()
+
+  if node ==# {}
+    return
+  endif
+
+  if !node.path.isDirectory
+    call node.activate({'reuse': 1, 'where': 't'})
+  endif
+endfunction
+
 " refreshes the node under cursor
 function! vimpanel#refreshNode()
   let node = vimpanel#getSelectedNode()
@@ -649,7 +662,7 @@ function! vimpanel#initStorageDir()
     call mkdir(g:VimpanelStorage)
     if !isdirectory(g:VimpanelStorage)
       call vimpanel#echo("cannot create vimpanel storage")
-    return 0
+      return 0
     endif
   endif
   return 1
@@ -687,4 +700,3 @@ function! vimpanel#hideMarkup()
     exe "hi VimpanelEndSlash guifg=" . bg_color . " guibg=" . bg_color
   endif
 endfunction
-

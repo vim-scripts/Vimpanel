@@ -7,11 +7,14 @@
 * Create and display any number of panels
 * Session support: find your panels and all other windows the way you left them when you exited Vim
 * Filesystem operations, including file copying using visual selection
-* Propper handling of Windows paths
+* Proper handling of Windows paths
 * Explore the filesystem without constrains, in explorer mode
 * Use it for project management, keeping bookmarks, notes or anything you like
 
-**[Demo](http://www.youtube.com/watch?v=z4tGbp2QJ6g&feature=youtu.be)**
+Vimpanel builds upon [NERDTree](https://github.com/scrooloose/nerdtree), in an attempt to make the side panel
+a place where you can keep your stuff organized, rather than just a file system explorer.
+
+![screenshot](http://i.imgur.com/e6dIvrX.png)
 
 ### Getting started
 
@@ -25,7 +28,7 @@ Load this panel in the current window with `:VimpanelLoad`
   
 Add entries to the panel with the `:Vimpanel` command.
 
-    :Vimpanel D:\Projects
+    :Vimpanel D:\apps\myapp
   
 The path you just added will act as a root and you can now expand and browse it. At any time you can add 
 other roots to the panel.
@@ -49,14 +52,15 @@ In this mode, you can also move up a dir by using the `u` key, or change the roo
 Exit explorer mode at any time by pressing `x` again.
 
 Inside the panel, several actions and filesystem operations are available.
-Check the [full list](https://github.com/mihaifm/vimpanel/edit/master/readme.md#mappings-inside-the-panel) below.
+Check the [full list](https://github.com/mihaifm/vimpanel#mappings-inside-the-panel) below.
 
 When you're done working, save the state of you panel and everything else you have on the screen:
 
     :VimpanelSessionMake
     
 This uses Vim's `mksession` command and some extra magic to save the state of your panels (the state 
-is defined by which dirs are expanded and which are closed).
+is defined by which dirs are expanded and which are closed). You can optionally pass in a session name
+to the command, if you want to keep multiple sessions with different names.
 
 When you're ready to work again, load up that session using:
 
@@ -65,8 +69,8 @@ When you're ready to work again, load up that session using:
 And that's about it. To make your life easier, you can use abbreviations or mappings for all these commands.
 Here are some recommendations to put in your `vimrc`:
 
-    map <leader>ss :VimpanelSessionMake<CR>
-    map <leader>sl :VimpanelSessionLoad<CR>
+    cabbrev ss VimpanelSessionMake
+    cabbrev sl VimpanelSessionLoad
     cabbrev vp Vimpanel
     cabbrev vl VimpanelLoad
     cabbrev vc VimpanelCreate
@@ -121,22 +125,34 @@ nodes accordingly.
     VimpanelRefresh
     
 Rebuilds the panel and also refreshes all the open directories in the panel by reading data from the filesystem. 
-Note that this command encorporates the functionality of the `:VimpanelRebuild` command.
+Note that this command incorporates the functionality of the `:VimpanelRebuild` command.
 
-    VimpanelSessionMake
-    
-Saves the current state of all the panels and all Vim windows and buffers.This is similar to `mksession` but it 
-saves your panels as well.
-The session is stored in a script called `global_sess.vim` located in the storage directory.
+    VimpanelToggleLeft [{name}]
 
-    VimpanelSessionLoad
+Toggles the display of a panel in a window on the left side of the screen. If no panel name is given, the last
+active panel is used.
+
+    VimpanelToggleRight [{name}]
+
+Same as `:VimpanelToggleLeft` but for the right side of the screen.
+
+    VimpanelSessionMake [{name}]
     
-Restores Vim (panels, windows, buffers) to the state saved by the `:VimpanelSessionMake` command. 
+Saves the current state of all the panels and all Vim windows and buffers. This is similar to `mksession` but it 
+saves your panels as well. The session is stored in a script called `{name}.vim` located in the storage 
+directory. If no name is provided, `default.vim` is used.
+
+    VimpanelSessionLoad [{name}]
+    
+Restores Vim (panels, windows, buffers) to the state saved by the `:VimpanelSessionMake` command. If no name
+is provided, it attempts to load the session called `default`.
 
 ### Mappings inside the panel
 
-    <CR> or double-click            expand directory or open file
+    <CR> or o or double-click       expand directory or open file
     <F5>                            refresh panel
+    <F6>                            toggle the display of hidden files and folders
+    t                               open file in new tab
     <C-c> or yy                     copy selected node (file or dir)
     <C-v> or p                      paste nodes
     dd                              delete node
@@ -170,21 +186,12 @@ Default: `~/vimpanel`
 Set this to 1 to remove the extra blank line that separates trees.   
 Default: 0
 
-    g:VimpanelRemoveDirCmd
+    g:VimpanelWinSize
 
-A string representing the system command to be executed when deleting a directory.   
-Default:    
-    `rmdir /s /q` on Windows     
-    `rm -rf` elsewhere
+Initial size (in columns) of the vimpanel window.    
+Default: 31
 
-    g:VimpanelCopyCmd
+    g:VimpanelShowHidden
 
-A string representing the system command to be executed when copying a file.     
-Default: `cp -r`    
-On Windows you can install `git` to make the `cp` command available.
-
-#### How does it work
-
-Vimpanel is built on a heavily modified NERDTree API.    
-You will find many similarities with NERDTree but many key differences as well.
-
+Set this to 0 to hide the files and folders starting with `.` for all the panels.    
+Default: 1

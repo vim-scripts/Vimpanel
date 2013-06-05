@@ -12,16 +12,20 @@ function! s:initVariable(var, value)
 endfunction
 
 if vimpanel#OS_Windows()
-    call s:initVariable("g:VimpanelRemoveDirCmd", 'rmdir /s /q')
-    call s:initVariable("g:VimpanelCopyCmd", 'cp -r')
+  call s:initVariable("g:VimpanelRemoveDirCmd", 'rmdir /s /q')
+  call s:initVariable("g:VimpanelCopyDirCmd", 'xcopy /s /e /i /y /q ')
+  call s:initVariable("g:VimpanelCopyFileCmd", 'copy /y ')
 else
-    call s:initVariable("g:VimpanelRemoveDirCmd", 'rm -rf')
-    call s:initVariable("g:VimpanelCopyCmd", 'cp -r')
+  call s:initVariable("g:VimpanelRemoveDirCmd", 'rm -rf')
+  call s:initVariable("g:VimpanelCopyDirCmd", 'cp -r')
+  call s:initVariable("g:VimpanelCopyFileCmd", 'cp -r')
 endif
 
 call s:initVariable("g:VimpanelStorage", expand('$HOME') . '/' . 'vimpanel')
 call s:initVariable("g:VimpanelDirArrows", 0)
 call s:initVariable("g:VimpanelCompact", 0)
+call s:initVariable("g:VimpanelWinSize", 31)
+call s:initVariable("g:VimpanelShowHidden", 1)
 
 " load modules
 runtime plugin/vimpanel/path.vim
@@ -58,9 +62,27 @@ function! s:CompletePanelNames(A, L, P)
   for filename in files
     let pathbits = split(filename, '\v\\|/', 1)
     let shortname = pathbits[len(pathbits)-1]
-    if shortname =~? '_session$' || shortname =~? '^global_sess'
+    if shortname =~? '_session$' || shortname =~? '\.vim$'
       continue
     endif
+    call add(retlist, shortname)
+  endfor
+
+  return filter(retlist, 'v:val =~# "^' . a:A . '"')
+endfunction
+
+function! s:CompleteSessionNames(A, L, P)
+  if !isdirectory(g:VimpanelStorage)
+    return
+  endif
+
+  let retlist = []
+  let files = split(globpath(g:VimpanelStorage, '*.vim', 1), '\n')
+
+  for filename in files
+    let pathbits = split(filename, '\v\\|/', 1)
+    let shortname = pathbits[len(pathbits)-1]
+    let shortname = substitute(shortname, '\.vim', '', '')
     call add(retlist, shortname)
   endfor
 
@@ -478,7 +500,8 @@ function! VimpanelPasteNodes()
     endif
     if !empty(parent)
       for copied_node in b:copied_nodes
-        let new_fullpath = parent.path.str() . "/" . copied_node.path.getLastPathComponent(0)
+        let new_fullpath = parent.path.str() . g:VimpanelPath.Slash()
+        let new_fullpath .= copied_node.path.getLastPathComponent(0)
         call vimpanel#echo("copying " . copied_node.path.str() . " to " . new_fullpath)
         let newNode = copied_node.copy(new_fullpath)
         call parent.refresh()
@@ -523,7 +546,7 @@ endfunction
 " VimpanelSessionMake - save a global session with all 
 " panels and open windows
 
-function! VimpanelSessionMake()
+function! VimpanelSessionMake(name)
   if !vimpanel#initStorageDir()
     return
   endif
@@ -538,8 +561,14 @@ function! VimpanelSessionMake()
       call VimpanelSave()
     endif
   endfor
-  
-  let sess_file = g:VimpanelStorage . "/" . "global_sess.vim"
+
+  let sess_file = ''
+  if empty(a:name)
+    let sess_file = g:VimpanelStorage ."/" . "default.vim"
+  else
+    let sess_file = g:VimpanelStorage ."/" . a:name . ".vim"
+  endif
+
   set sessionoptions=buffers,curdir,resize,winsize,blank,help,winpos
   exec "mksession! " . sess_file
 endfunction
@@ -548,11 +577,20 @@ endfunction
 " VimpanelSessionLoad - load the global vimpanel session
 " which includes the panel and all open windows
 
-function! VimpanelSessionLoad()
+function! VimpanelSessionLoad(name)
   set sessionoptions=buffers,curdir,resize,winsize,blank,help,winpos
-  let sess_file = g:VimpanelStorage . "/" . "global_sess.vim"
+
+  if empty(a:name)
+    let sess_file = g:VimpanelStorage . "/" . "default.vim"
+  else
+    let sess_file = g:VimpanelStorage . "/" . a:name . ".vim"
+  endif
+
   if filereadable(sess_file)
     exec "silent source " . sess_file
+  else
+    call vimpanel#echoWarning("invalid session name")
+    return
   endif
 
   let panels = vimpanel#listAllPanels()
@@ -592,6 +630,48 @@ function! VimpanelEdit(panel_name)
   exe "e " . storage_file
 endfunction
 
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" VimpanelToggle - toggle a panel in a location, topleft or botright
+
+function! VimpanelToggle(panel_name, location)
+  let active_panel_name = ''
+  if empty(a:panel_name)
+    let active_panel_name = s:active_panel
+  else
+    let active_panel_name = a:panel_name
+  endif
+
+  if empty(active_panel_name)
+    call vimpanel#echoError("no panel name given")
+    return
+  endif
+
+  let active_panel_bufname = "vimpanel-" . active_panel_name
+
+  if bufexists(active_panel_bufname)
+    let vp_winnr = bufwinnr(active_panel_bufname)
+    if vp_winnr == -1
+      exe a:location . " vertical " . g:VimpanelWinSize . " split"
+      call VimpanelOpen(active_panel_name, 0)
+    else
+      exe vp_winnr . "wincmd w"
+      exe "q"
+    endif
+  else
+    exe a:location . " vertical " . g:VimpanelWinSize . " split"
+    call VimpanelLoad(active_panel_name)
+  endif
+endfunction
+
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" VimpanelViewHidden - toggle the display of files/folders starting with a .
+
+function! VimpanelViewHidden()
+  let g:VimpanelShowHidden = !g:VimpanelShowHidden
+  call VimpanelRefresh()
+endfunction
+
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 " VimpanelBindMappings - mappings and commands for the vimpanel buffer
 
@@ -599,9 +679,12 @@ function! VimpanelBindMappings()
   " todo - make these keys configurable
   nnoremap <buffer> <silent> <CR>             :call vimpanel#selectNode()<CR>
   nnoremap <buffer> <silent> <2-LeftMouse>    :call vimpanel#selectNode()<CR>
+  nnoremap <buffer> <silent> o                :call vimpanel#selectNode()<CR>
+  nnoremap <buffer> <silent> t                :call vimpanel#tabNode()<CR>
   nnoremap <buffer> <silent> <C-r>            :call vimpanel#refreshNode()<CR>
 
   nnoremap <buffer> <F5>                      :VimpanelRefresh<CR>
+  nnoremap <buffer> <F6>                      :call VimpanelViewHidden()<CR>
 
   map <buffer> <silent> <C-c>                 :call VimpanelCopyNode()<CR>
   map <buffer> <silent> yy                    :call VimpanelCopyNode()<CR>
@@ -644,12 +727,14 @@ command! -nargs=1 -complete=file VimpanelAdd call VimpanelAdd('<args>')
 command! -nargs=1 -complete=customlist,s:CompletePanelNames VimpanelEdit call VimpanelEdit('<args>')
 command! -nargs=1 -complete=customlist,s:CompletePanelNames VimpanelOpen call VimpanelOpen('<args>', 0)
 command! -nargs=1 -complete=customlist,s:CompletePanelNames VimpanelLoad call VimpanelLoad('<args>')
+command! -nargs=? -complete=customlist,s:CompletePanelNames VimpanelToggleLeft call VimpanelToggle('<args>', 'topleft')
+command! -nargs=? -complete=customlist,s:CompletePanelNames VimpanelToggleRight call VimpanelToggle('<args>', 'botright')
 command! VimpanelRebuild call VimpanelRebuild()
 command! VimpanelRefresh call VimpanelRefresh()
 command! VimpanelSave call VimpanelSave()
 
-command! VimpanelSessionMake call VimpanelSessionMake()
-command! VimpanelSessionLoad call VimpanelSessionLoad()
+command! -nargs=? -complete=customlist,s:CompleteSessionNames VimpanelSessionMake call VimpanelSessionMake('<args>')
+command! -nargs=? -complete=customlist,s:CompleteSessionNames VimpanelSessionLoad call VimpanelSessionLoad('<args>')
 
 augroup Vimpanel
   autocmd VimEnter * silent! autocmd! FileExplorer

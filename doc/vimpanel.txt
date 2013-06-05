@@ -1,4 +1,4 @@
-*vimpanel.txt*            version 1.0.0
+*vimpanel.txt*            version 1.0.3
 
 *Vimpanel* 
 
@@ -31,7 +31,7 @@ Load this panel in the current window with |:VimpanelLoad|
   
 Add entries to the panel with the |:Vimpanel| command.
 >
-    :Vimpanel D:\Projects
+    :Vimpanel D:\apps\myapp
   
 The path you just added will act as a root and you can now expand and browse
 it. At any time you can add other roots to the panel.
@@ -65,7 +65,8 @@ have on the screen:
     
 This uses Vim's |mksession| command and some extra magic to save the state
 your panels (the state is defined by which dirs are expanded and which are 
-closed).
+closed). You can optionally pass in a session name to the command, if you 
+want to keep multiple sessions with different names.
 
 When you're ready to work again, load up that session using:
 >
@@ -75,8 +76,8 @@ And that's about it. To make your life easier, you can use abbreviations or
 mappings for all these commands. Here are some recommendations to put in your
 |vimrc|:
 >
-    map <leader>ss :VimpanelSessionMake<CR>
-    map <leader>sl :VimpanelSessionLoad<CR>
+    cabbrev ss VimpanelSessionMake
+    cabbrev sl VimpanelSessionLoad
     cabbrev vp Vimpanel
     cabbrev vl VimpanelLoad
     cabbrev vc VimpanelCreate
@@ -150,25 +151,39 @@ Rebuilds the panel and also refreshes all the open directories in the panel by
 reading data from the filesystem. Note that this command encorporates the 
 functionality of the |:VimpanelRebuild| command.
 
+                                                          *VimpanelToggleLeft*
+:VimpanelToggleLeft [{name}]
+
+Toggles the display of a panel in a window on the left side of the screen.
+If no panel name is given, the last active panel is used.
+
+                                                         *VimpanelToggleRight*
+:VimpanelToggleRight [{name}]
+
+Same as |:VimpanelToggleLeft| but for the right side of the screen.
+
                                                          *VimpanelSessionMake*
-:VimpanelSessionMake
+:VimpanelSessionMake [{name}]
     
 Saves the current state of all the panels and all Vim windows and buffers. 
 This is similar to |mksession| but it saves your panels as well.
-The session is stored in a script called global_sess.vim located in the 
-storage directory.
+The session is stored in a script called {name}.vim located in the 
+storage directory. If no name is provided, default.vim is used.
 
                                                          *VimpanelSessionLoad*
-:VimpanelSessionLoad
+:VimpanelSessionLoad [{name}]
     
 Restores Vim (panels, windows, buffers) to the state saved by the 
-|:VimpanelSessionMake| command. 
+|:VimpanelSessionMake| command. If no name is provided, it attempts to load
+the session called 'default'
 
 ==============================================================================
 3. Mappings inside the panel                               *Vimpanel-mappings*
 
-    <CR> or double-click            expand directory or open file
+    <CR>, double-click, o           expand directory or open file
     <F5>                            refresh panel
+    <F6>                            toggle the display of hidden files and folders
+    t                               open file in new tab
     <C-c> or yy                     copy selected node (file or dir)
     <C-v> or p                      paste nodes
     dd                              delete node
@@ -207,16 +222,12 @@ Default: '~/vimpanel'
 Set this to 1 to remove the extra blank line that separates trees.   
 Default: 0
 
-                                                      *g:VimpanelRemoveDirCmd*
+                                                           *g:VimpanelWinSize*
 
-A string representing the system command to be executed when deleting a
-directory.   
-Default: >
-    'rmdir /s /q' on Windows     
-    'rm -rf' elsewhere
-<
-                                                           *g:VimpanelCopyCmd*
+Initial size (in columns) of the vimpanel window.
+Default: 31
 
-A string representing the system command to be executed when copying a file.     
-Default: 'cp -r'    
-On Windows you can install git to make the cp command available.
+                                                        *g:VimpanelShowHidden*
+
+Set this to 0 to hide the files and folders starting with . for all the panels.
+Default: 1
